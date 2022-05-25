@@ -23,7 +23,7 @@ type Config struct {
 type (
 	Server struct {
 		*http.Server
-		cfg *Config
+		cfg Config
 	}
 	Option func(s *Server) error
 )
@@ -40,17 +40,25 @@ func New(opts ...Option) (*Server, error) {
 		}
 	}
 
-	if s.cfg == nil {
-		return nil, fmt.Errorf("config: nil")
+	if len(s.cfg.Address) == 0 {
+		s.Addr = ":8080"
+	} else {
+		s.Addr = s.cfg.Address
 	}
 
-	s.Addr = s.cfg.Address
+	if s.Handler == nil {
+		h, err := handler.NewHandler()
+		if err != nil {
+			return nil, err
+		}
+		s.Handler = h
+	}
 
 	return s, nil
 }
 
 // WithConfig sets Config.
-func WithConfig(cfg *Config) Option {
+func WithConfig(cfg Config) Option {
 	return func(s *Server) error {
 		s.cfg = cfg
 		return nil
@@ -66,7 +74,7 @@ func WithRouter(r *handler.Handler) Option {
 }
 
 // Serve starts listening for inbound requests.
-func (s *Server) Serve(ctx context.Context) {
+func (s *Server) Serve(ctx context.Context) error {
 	ctx, _ = logging.GetCtxLogger(ctx) // correlationID is created here
 	logger := s.Logger(ctx)
 	logger.Info().Msg("Started serve connections")
@@ -74,9 +82,10 @@ func (s *Server) Serve(ctx context.Context) {
 	// service connections
 	if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.Err(err).Msg("ListenAndServe")
-		return
+		return err
 	}
 	logger.Info().Msg("Finished serve connections")
+	return nil
 }
 
 // Close closes the HTTPServer from listening for the inbound requests.

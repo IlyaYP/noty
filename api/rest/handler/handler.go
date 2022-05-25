@@ -54,8 +54,7 @@ func NewHandler(opts ...Option) (*Handler, error) {
 	h.MethodNotAllowed(methodNotAllowedHandler)
 	h.NotFound(notFoundHandler)
 	h.Route("/api/client", h.client)
-	//h.Route("/api/sending", h.sending)
-	//h.Route("/api/user/balance", h.balance)
+	h.Route("/api/sending", h.sending)
 	h.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("pong"))
 	})
