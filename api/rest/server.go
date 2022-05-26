@@ -77,7 +77,7 @@ func WithRouter(r *handler.Handler) Option {
 func (s *Server) Serve(ctx context.Context) error {
 	ctx, _ = logging.GetCtxLogger(ctx) // correlationID is created here
 	logger := s.Logger(ctx)
-	logger.Info().Msg("Started serve connections")
+	logger.Info().Msg("Starting serve connections")
 
 	// service connections
 	if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {

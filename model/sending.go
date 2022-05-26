@@ -29,7 +29,7 @@ func (s *Sending) Bind(r *http.Request) error {
 	return nil
 }
 
-// GetLoggerContext enriches logger context with essential Client fields.
+// GetLoggerContext enriches logger context with essential fields.
 func (s *Sending) GetLoggerContext(logCtx zerolog.Context) zerolog.Context {
 	if s.ID != uuid.Nil {
 		logCtx = logCtx.Str(logging.SendingIDKey, s.ID.String())

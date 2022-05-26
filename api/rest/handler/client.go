@@ -2,8 +2,10 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/google/uuid"
 	"net/http"
 	"noty/model"
 	"noty/pkg/logging"
@@ -20,23 +22,25 @@ func (h *Handler) client(router chi.Router) {
 
 // clientAdd adds new client
 func (h *Handler) clientAdd(w http.ResponseWriter, r *http.Request) {
-
-	ctx, _ := logging.GetCtxLogger(r.Context()) // correlationID is created here
+	ctx, _ := logging.GetCtxLogger(r.Context())
 	logger := h.Logger(ctx)
 
 	input := &model.Client{}
 
 	if err := render.Bind(r, input); err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
-		logger.Err(err).Msg("Error register user")
+		logger.Err(err).Msg("clientAdd render.Bind")
 		return
 	}
 
+	input.ID, _ = uuid.NewUUID()
 	logger.UpdateContext(input.GetLoggerContext)
 
 	//user, err := h.userSvc.Register(ctx, input.Login, input.Password)
 
-	logger.Info().Msg("Successfully added new client")
+	logger.Info().Msg("new client")
+
+	render.Render(w, r, input)
 
 }
 
@@ -51,9 +55,34 @@ func (h *Handler) clientContext(next http.Handler) http.Handler {
 
 // clientUpdate updates client
 func (h *Handler) clientUpdate(w http.ResponseWriter, r *http.Request) {
+	ctx, _ := logging.GetCtxLogger(r.Context())
+	logger := h.Logger(ctx)
+
+	input := &model.Client{}
+
+	if err := render.Bind(r, input); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+		logger.Err(err).Msg("clientUpdate render.Bind")
+		return
+	}
+
+	logger.UpdateContext(input.GetLoggerContext)
+
+	//user, err := h.userSvc.Register(ctx, input.Login, input.Password)
+
+	logger.Info().Msg("update client")
+
+	render.Render(w, r, input)
+
 }
 
 // clientDelete deletes client
-// DELETE /client/{id}/
+// DELETE /api/client/{id}
 func (h *Handler) clientDelete(w http.ResponseWriter, r *http.Request) {
+	ctx, _ := logging.GetCtxLogger(r.Context())
+	logger := h.Logger(ctx)
+
+	id := chi.URLParam(r, "id")
+	logger.Info().Msgf("Delete client %s", id)
+	fmt.Fprintf(w, "Delete client %s", id)
 }

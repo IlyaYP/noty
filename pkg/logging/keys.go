@@ -13,6 +13,9 @@ const (
 	// ClientIDKey defines the logging key for tracking the User.
 	ClientIDKey = "client_id"
 
+	// MessageIDKey defines the logging key for tracking the Message.
+	MessageIDKey = "message_id"
+
 	// IDKey defines logging key to track object ID.
 	IDKey = "id"
 )

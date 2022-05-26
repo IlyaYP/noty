@@ -1,8 +1,11 @@
 package model
 
 import (
+	"fmt"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 	"net/http"
+	"noty/pkg/logging"
 	"time"
 )
 
@@ -14,6 +17,19 @@ type Message struct {
 	ClientID  uuid.UUID     `json:"client_id" yaml:"client_id"`
 }
 
+func (*Message) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+// GetLoggerContext enriches logger context with essential fields.
+func (m *Message) GetLoggerContext(logCtx zerolog.Context) zerolog.Context {
+	if m.ID != 0 {
+		logCtx = logCtx.Int64(logging.MessageIDKey, m.ID)
+	}
+
+	return logCtx
+}
+
 type MessageStatus string
 
 const (
@@ -23,6 +39,45 @@ const (
 	MessageStatusCompleted MessageStatus = "COMPLETED"
 )
 
-func (*Message) Render(w http.ResponseWriter, r *http.Request) error {
+var (
+	// messageStatusMap maps OrderStatus value to its int representation.
+	messageStatusToIntMap = map[MessageStatus]int{
+		MessageStatusCreated:   1,
+		MessageStatusShipped:   2,
+		MessageStatusDelivered: 3,
+		MessageStatusCompleted: 4,
+	}
+
+	// messageStatusToStrMap maps OrderStatus value to its string representation.
+	messageStatusToStrMap = map[int]MessageStatus{
+		1: MessageStatusCreated,
+		2: MessageStatusShipped,
+		3: MessageStatusDelivered,
+		4: MessageStatusCompleted,
+	}
+)
+
+// NewMessageStatusFromInt returns OrderStatus by its int representation (might be invalid).
+func NewMessageStatusFromInt(v int) MessageStatus {
+	return messageStatusToStrMap[v]
+}
+
+// String implements the fmt.Stringer interface.
+func (s MessageStatus) String() string {
+	return string(s)
+}
+
+// Int returns enum value int representation.
+func (s MessageStatus) Int() int {
+	return messageStatusToIntMap[s]
+}
+
+// Validate validates enum value.
+func (s MessageStatus) Validate() error {
+	_, found := messageStatusToIntMap[s]
+	if !found {
+		return fmt.Errorf("unknown value: %v", s)
+	}
+
 	return nil
 }
