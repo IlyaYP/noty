@@ -9,12 +9,19 @@ import (
 )
 
 // Client keeps client data.
-type Client struct {
-	ID     uuid.UUID `json:"id" yaml:"id"`
-	Phone  int       `json:"phone" yaml:"number"`
-	OpCode string    `json:"op_code" yaml:"op_code"`
-	Tag    string    `json:"tag" yaml:"tag"`
-	TZ     string    `json:"tz" yaml:"tz"`
+type (
+	Client struct {
+		ID     uuid.UUID `json:"id" yaml:"id"`
+		Phone  int       `json:"phone" yaml:"number"`
+		OpCode string    `json:"op_code" yaml:"op_code"`
+		Tag    string    `json:"tag" yaml:"tag"`
+		TZ     string    `json:"tz" yaml:"tz"`
+	}
+	Clients []Client
+)
+
+func (Clients) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
 }
 
 func (*Client) Render(w http.ResponseWriter, r *http.Request) error {
@@ -23,8 +30,17 @@ func (*Client) Render(w http.ResponseWriter, r *http.Request) error {
 
 func (c *Client) Bind(r *http.Request) error {
 	if c.Phone == 0 {
-		return fmt.Errorf("Phone is a required field")
+		return fmt.Errorf("phone is a required field")
 	}
+
+	//if c.OpCode == "" {
+	//	return fmt.Errorf("op_code is a required field")
+	//}
+
+	//if c.ID == uuid.Nil {
+	//	c.ID, _ = uuid.NewUUID()
+	//}
+
 	return nil
 }
 

@@ -2,12 +2,14 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
 	"net/http"
 	"noty/model"
+	"noty/pkg"
 	"noty/pkg/logging"
 )
 
@@ -31,8 +33,19 @@ func (h *Handler) sendingsGenStat(w http.ResponseWriter, r *http.Request) {
 	ctx, _ := logging.GetCtxLogger(r.Context())
 	logger := h.Logger(ctx)
 
-	logger.Info().Msgf("sendingsGenStat")
-	fmt.Fprintf(w, "sendingsGenStat")
+	sendings, err := h.st.GetSendings(ctx)
+	if err != nil {
+		if errors.Is(err, pkg.ErrNoData) {
+			render.Render(w, r, ErrNoData)
+			return
+		}
+		logger.Err(err).Msg("sendingsGenStat: can't get sendings from DB")
+		render.Render(w, r, ErrServerError(err))
+		return
+	}
+
+	render.Render(w, r, sendings)
+
 }
 
 // sendingContext do smth
@@ -67,9 +80,24 @@ func (h *Handler) sendingAdd(w http.ResponseWriter, r *http.Request) {
 		logger.Err(err).Msg("sendingAdd render.Bind")
 		return
 	}
+	fmt.Println(input)
 
-	input.ID, _ = uuid.NewUUID()
+	if input.ID == uuid.Nil {
+		input.ID, _ = uuid.NewUUID()
+	}
+
 	logger.UpdateContext(input.GetLoggerContext)
+
+	_, err := h.st.CreateSending(ctx, *input)
+	if err != nil {
+		logger.Err(err).Msg("sendingAdd")
+		if errors.Is(err, pkg.ErrAlreadyExists) {
+			render.Render(w, r, ErrAlreadyExists)
+			return
+		}
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
 
 	logger.Info().Msg("new sending")
 
@@ -90,13 +118,28 @@ func (h *Handler) sendingUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.UpdateContext(input.GetLoggerContext)
+	id := chi.URLParam(r, "id")
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
 
-	//user, err := h.userSvc.Register(ctx, input.Login, input.Password)
+	input.ID = uid
+
+	logger.UpdateContext(input.GetLoggerContext)
+	ctx = logging.SetCtxLogger(ctx, *logger)
+
+	sending, err := h.st.UpdateSending(ctx, *input)
+	if err != nil {
+		logger.Err(err).Msg("sendingUpdate st.UpdateSending")
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
 
 	logger.Info().Msg("update sending")
 
-	render.Render(w, r, input)
+	render.Render(w, r, &sending)
 }
 
 // sendingDelete deletes sending
@@ -106,6 +149,17 @@ func (h *Handler) sendingDelete(w http.ResponseWriter, r *http.Request) {
 	logger := h.Logger(ctx)
 
 	id := chi.URLParam(r, "id")
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	if err := h.st.DeleteSendingByID(ctx, uid); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
 	logger.Info().Msgf("Delete sending %s", id)
 	fmt.Fprintf(w, "Delete sending %s", id)
 }

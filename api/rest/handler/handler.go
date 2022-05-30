@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog"
 	"net/http"
 	"noty/pkg/logging"
+	"noty/storage"
 )
 
 const (
@@ -20,6 +21,7 @@ type (
 	Handler struct {
 		*chi.Mux
 		//tokenAuth *jwtauth.JWTAuth
+		st storage.Storage
 	}
 	Option func(h *Handler) error
 )
@@ -35,9 +37,10 @@ func NewHandler(opts ...Option) (*Handler, error) {
 		}
 	}
 
-	//if h.userSvc == nil {
-	//	return nil, fmt.Errorf("userSvc: nil")
-	//}
+	if h.st == nil {
+		return nil, fmt.Errorf("st: nil")
+	}
+
 	//
 	//if h.orderSvc == nil {
 	//	return nil, fmt.Errorf("orderSvc: nil")
@@ -60,6 +63,14 @@ func NewHandler(opts ...Option) (*Handler, error) {
 	})
 
 	return h, nil
+}
+
+// WithStorage sets Storage.
+func WithStorage(st storage.Storage) Option {
+	return func(h *Handler) error {
+		h.st = st
+		return nil
+	}
 }
 
 func (h *Handler) Logger(ctx context.Context) *zerolog.Logger {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"noty/api/rest/handler"
 	"noty/pkg/logging"
+	"noty/storage"
 	"time"
 )
 
@@ -24,6 +25,7 @@ type (
 	Server struct {
 		*http.Server
 		cfg Config
+		st  storage.Storage
 	}
 	Option func(s *Server) error
 )
@@ -46,8 +48,12 @@ func New(opts ...Option) (*Server, error) {
 		s.Addr = s.cfg.Address
 	}
 
+	if s.st == nil {
+		return nil, fmt.Errorf("st: nil")
+	}
+
 	if s.Handler == nil {
-		h, err := handler.NewHandler()
+		h, err := handler.NewHandler(handler.WithStorage(s.st))
 		if err != nil {
 			return nil, err
 		}
@@ -55,6 +61,14 @@ func New(opts ...Option) (*Server, error) {
 	}
 
 	return s, nil
+}
+
+// WithStorage sets Storage.
+func WithStorage(st storage.Storage) Option {
+	return func(s *Server) error {
+		s.st = st
+		return nil
+	}
 }
 
 // WithConfig sets Config.

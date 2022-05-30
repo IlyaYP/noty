@@ -45,6 +45,7 @@ func run() error {
 		logger.Err(err).Msg("building psql storage")
 		return fmt.Errorf("building psql storage: %w", err)
 	}
+	defer st.Close()
 
 	err = st.Ping(ctx)
 	if err != nil {
@@ -52,7 +53,7 @@ func run() error {
 		return fmt.Errorf("ping psql storage: %w", err)
 	}
 
-	srv, err := rest.New()
+	srv, err := rest.New(rest.WithStorage(st))
 	if err != nil {
 		logger.Err(err).Msg("Can not create rest server")
 		return err
@@ -61,7 +62,6 @@ func run() error {
 	go func() {
 		<-ctx.Done()
 		srv.Close(ctx)
-		st.Close()
 	}()
 
 	return srv.Serve(ctx)
