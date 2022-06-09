@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"noty/pkg/logging"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -21,32 +20,31 @@ type (
 		Codes []int    `json:"codes,omitempty"`
 	}
 	Sending struct {
-		ID      uuid.UUID `json:"id" yaml:"id"`
-		StartAt time.Time `json:"start_at,omitempty" yaml:"start_at"`
-		Text    string    `json:"text" yaml:"text"`
-		//Filter  string    `json:"filter,omitempty" yaml:"filter"` // TODO: invent something instead of string
-		Filter Filter    `json:"filter,omitempty" yaml:"filter"`
-		StopAt time.Time `json:"stop_at,omitempty" yaml:"stop_at"`
+		ID      uuid.UUID `json:"id"`
+		StartAt time.Time `json:"start_at,omitempty"`
+		Text    string    `json:"text"`
+		Filter  Filter    `json:"filter,omitempty"`
+		StopAt  time.Time `json:"stop_at,omitempty"`
 	}
 	Sendings []Sending
 )
 
-// do not need here, just for example
-func arrayToString(a []int, delim string) string {
-	return strings.Trim(strings.Replace(fmt.Sprint(a), " ", delim, -1), "[]")
-	//return strings.Trim(strings.Join(strings.Split(fmt.Sprint(a), " "), delim), "[]")
-	//return strings.Trim(strings.Join(strings.Fields(fmt.Sprint(a)), delim), "[]")
-}
-
-// do not need here, just for example
-func (f *Filter) String() string {
-	// ('{"vip1","vip2"}','{911, 912, 913}')
-	//Tags := []string{"vip1", "vip2", "vip3"}
-	//Codes := []int{911, 912}
-	t := strings.Join(f.Tags, "\",\"")
-	c := arrayToString(f.Codes, ",")
-	return fmt.Sprintf("'{\"%v\"}','{%v}'", t, c)
-}
+//// do not need here, just for example
+//func arrayToString(a []int, delim string) string {
+//	return strings.Trim(strings.Replace(fmt.Sprint(a), " ", delim, -1), "[]")
+//	//return strings.Trim(strings.Join(strings.Split(fmt.Sprint(a), " "), delim), "[]")
+//	//return strings.Trim(strings.Join(strings.Fields(fmt.Sprint(a)), delim), "[]")
+//}
+//
+//// do not need here, just for example
+//func (f *Filter) String() string {
+//	// ('{"vip1","vip2"}','{911, 912, 913}')
+//	//Tags := []string{"vip1", "vip2", "vip3"}
+//	//Codes := []int{911, 912}
+//	t := strings.Join(f.Tags, "\",\"")
+//	c := arrayToString(f.Codes, ",")
+//	return fmt.Sprintf("'{\"%v\"}','{%v}'", t, c)
+//}
 
 func (dst *Filter) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
 	if src == nil {

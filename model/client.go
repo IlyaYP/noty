@@ -13,7 +13,7 @@ type (
 	Client struct {
 		ID     uuid.UUID `json:"id" yaml:"id"`
 		Phone  int       `json:"phone" yaml:"number"`
-		OpCode string    `json:"op_code" yaml:"op_code"`
+		OpCode int       `json:"op_code" yaml:"op_code"`
 		Tag    string    `json:"tag" yaml:"tag"`
 		TZ     string    `json:"tz" yaml:"tz"`
 	}

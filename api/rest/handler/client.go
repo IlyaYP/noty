@@ -14,7 +14,8 @@ import (
 )
 
 func (h *Handler) client(router chi.Router) {
-	router.Get("/", h.clientsGet)
+	//router.Get("/", h.clientsGet)
+	router.Get("/", h.clientsFilter)
 	router.Post("/", h.clientAdd)
 	router.Route("/{id}", func(router chi.Router) {
 		router.Use(h.clientContext)
@@ -22,6 +23,30 @@ func (h *Handler) client(router chi.Router) {
 		router.Delete("/", h.clientDelete)
 	})
 }
+
+func (h *Handler) clientsFilter(w http.ResponseWriter, r *http.Request) {
+	ctx, _ := logging.GetCtxLogger(r.Context())
+	logger := h.Logger(ctx)
+
+	filter := model.Filter{
+		Tags:  []string{"vip1", "vip2"},
+		Codes: []int{911, 912},
+	}
+	clients, err := h.st.FilterClients(ctx, filter)
+	if err != nil {
+		if errors.Is(err, pkg.ErrNoData) {
+			render.Render(w, r, ErrNoData)
+			return
+		}
+		logger.Err(err).Msg("clientsGet: can't get clients from DB")
+		render.Render(w, r, ErrServerError(err))
+		return
+	}
+
+	render.Render(w, r, clients)
+
+}
+
 func (h *Handler) clientsGet(w http.ResponseWriter, r *http.Request) {
 	ctx, _ := logging.GetCtxLogger(r.Context())
 	logger := h.Logger(ctx)
@@ -59,6 +84,8 @@ func (h *Handler) clientAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.UpdateContext(input.GetLoggerContext)
+
+	logger.Debug().Msg("This message appears only when log level set to Debug")
 
 	_, err := h.st.CreateClient(ctx, *input)
 	if err != nil {

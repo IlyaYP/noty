@@ -3,7 +3,6 @@ package psql
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
@@ -17,10 +16,7 @@ func (svc *Storage) CreateSending(ctx context.Context, sending model.Sending) (m
 	logger := svc.Logger(ctx)
 	logger.UpdateContext(sending.GetLoggerContext)
 
-	fmt.Printf("\n\n%s\n\n", sending)
-
 	// insert into sendings(text, filter) values ('hello world!', ('{"vip1","vip2"}','{911, 912, 913}'));
-
 	_, err := svc.pool.Exec(ctx,
 		`insert into sendings(id, start_at, text, filter, stop_at) values ($1, $2, $3, $4, $5)`,
 		sending.ID,

@@ -1,0 +1,75 @@
+openapi: 3.0.1
+info:
+  title: Probe Server
+  description: API сервера для помощи в разработке проекта тестового задания Fabrique
+  contact:
+    email: christina.akhmedi@fabrique.studio
+  version: 1.0.0
+servers:
+  - url: https://probe.fbrq.cloud/v1
+tags:
+  - name: send
+paths:
+  /send/{msgId}:
+    post:
+      tags:
+        - send
+      summary: отправка сообщения абоненту
+      operationId: sendMsg
+      parameters:
+        - name: msgId
+          in: path
+          description: ID отправляемого сообщения
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Объект сообщния для отправки абоненту
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Msg'
+        required: true
+      responses:
+        '200':
+          description: успешное выполнение
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Ошибка в запросе
+          content: {}
+components:
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    Msg:
+      required:
+        - id
+        - phone
+        - text
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        phone:
+          type: integer
+        text:
+          type: string
+          description: текст сообщения
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []

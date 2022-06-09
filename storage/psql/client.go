@@ -111,3 +111,43 @@ func (svc *Storage) GetClients(ctx context.Context) (model.Clients, error) {
 
 	return clients, nil
 }
+
+func (svc *Storage) FilterClients(ctx context.Context, filter model.Filter) (model.Clients, error) {
+	logger := svc.Logger(ctx)
+	var clients model.Clients
+
+	// select * from clients where op_code in (911,912) AND tag in ('vip1','vip2');
+	clientsRows, err := svc.pool.Query(
+		ctx,
+		"select * from clients WHERE op_code = ANY($1::INT[]) AND tag = ANY($2::text[])",
+		filter.Codes,
+		filter.Tags,
+	)
+	if err != nil {
+		logger.Err(err).Msg("GetClients")
+		return nil, err //pgx.ErrNoRows
+	}
+	defer clientsRows.Close()
+
+	for clientsRows.Next() {
+		client := model.Client{}
+		err := clientsRows.Scan(
+			&client.ID,
+			&client.Phone,
+			&client.OpCode,
+			&client.Tag,
+			&client.TZ,
+		)
+		if err != nil {
+			logger.Err(err).Msg("GetClients")
+			continue
+		}
+		clients = append(clients, client)
+	}
+
+	if len(clients) == 0 {
+		return nil, pkg.ErrNoData
+	}
+
+	return clients, nil
+}

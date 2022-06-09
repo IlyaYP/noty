@@ -3,7 +3,6 @@ package logging
 import (
 	"context"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"noty/pkg"
 
 	"github.com/google/uuid"
@@ -33,8 +32,8 @@ func GetCtxLogger(ctx context.Context) (context.Context, zerolog.Logger) {
 	}
 
 	correlationID, _ := uuid.NewUUID()
-	//logger := NewLogger().With().Str(CorrelationIDKey, correlationID.String()).Logger()
-	logger := log.With().Str(CorrelationIDKey, correlationID.String()).Logger()
+	logger := NewLogger().With().Str(CorrelationIDKey, correlationID.String()).Logger()
+	//logger := log.With().Str(CorrelationIDKey, correlationID.String()).Logger()
 
 	ctx = context.WithValue(ctx, contextKeyCorrelationID, correlationID.String())
 

@@ -6,11 +6,14 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"noty/api/rest"
+	"noty/cmd/config"
 	"noty/pkg/logging"
+	"noty/sender"
 	"noty/storage/psql"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 const (
@@ -18,10 +21,10 @@ const (
 )
 
 func main() {
-	log.Logger = log.Logger.
+	log.Logger = log.
 		Output(zerolog.ConsoleWriter{
-			Out: os.Stderr,
-			//TimeFormat: time.RFC3339,
+			Out:        os.Stderr,
+			TimeFormat: time.Stamp,
 		}).
 		Level(LogLevel)
 
@@ -33,11 +36,19 @@ func main() {
 
 func run() error {
 	ctx, logger := logging.GetCtxLogger(context.Background())
+	logger = logger.With().Int("ver", 1).Logger()
+	ctx = logging.SetCtxLogger(ctx, logger)
+
+	cfg, err := config.New()
+	if err != nil {
+		return err
+	}
+
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer stop()
 
 	st, err := psql.New(
-		//psql.WithConfig(c.PSQLStorage),
+		psql.WithConfig(cfg.PSQLStorage),
 		psql.WithContext(ctx),
 	)
 
@@ -53,7 +64,15 @@ func run() error {
 		return fmt.Errorf("ping psql storage: %w", err)
 	}
 
-	srv, err := rest.New(rest.WithStorage(st))
+	sndr, err := sender.New(sender.WithStorage(st))
+	if err != nil {
+		logger.Err(err).Msg("Can not create sender")
+		return err
+	}
+
+	//sndr.Process(ctx)
+
+	srv, err := rest.New(rest.WithConfig(cfg.APISever), rest.WithStorage(st), rest.WithSender(sndr))
 	if err != nil {
 		logger.Err(err).Msg("Can not create rest server")
 		return err

@@ -21,6 +21,8 @@ type Storage interface {
 
 	GetClients(ctx context.Context) (model.Clients, error)
 
+	FilterClients(ctx context.Context, filter model.Filter) (model.Clients, error)
+
 	CreateSending(ctx context.Context, sending model.Sending) (model.Sending, error)
 
 	UpdateSending(ctx context.Context, sending model.Sending) (model.Sending, error)

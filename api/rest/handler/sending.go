@@ -70,7 +70,9 @@ func (h *Handler) sendingStat(w http.ResponseWriter, r *http.Request) {
 
 // sendingAdd adds new sending
 func (h *Handler) sendingAdd(w http.ResponseWriter, r *http.Request) {
-	ctx, _ := logging.GetCtxLogger(r.Context())
+	//ctx, _ := logging.GetCtxLogger(r.Context())
+	ctx, _ := logging.GetCtxLogger(context.Background())
+
 	logger := h.Logger(ctx)
 
 	input := &model.Sending{}
@@ -80,13 +82,13 @@ func (h *Handler) sendingAdd(w http.ResponseWriter, r *http.Request) {
 		logger.Err(err).Msg("sendingAdd render.Bind")
 		return
 	}
-	fmt.Println(input)
 
 	if input.ID == uuid.Nil {
 		input.ID, _ = uuid.NewUUID()
 	}
 
 	logger.UpdateContext(input.GetLoggerContext)
+	ctx = logging.SetCtxLogger(ctx, *logger)
 
 	_, err := h.st.CreateSending(ctx, *input)
 	if err != nil {
@@ -100,6 +102,8 @@ func (h *Handler) sendingAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info().Msg("new sending")
+
+	go h.snd.Process(ctx, *input)
 
 	render.Render(w, r, input)
 

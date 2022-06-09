@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog"
 	"net/http"
 	"noty/pkg/logging"
+	"noty/sender"
 	"noty/storage"
 )
 
@@ -21,7 +22,8 @@ type (
 	Handler struct {
 		*chi.Mux
 		//tokenAuth *jwtauth.JWTAuth
-		st storage.Storage
+		st  storage.Storage
+		snd sender.Service
 	}
 	Option func(h *Handler) error
 )
@@ -39,6 +41,10 @@ func NewHandler(opts ...Option) (*Handler, error) {
 
 	if h.st == nil {
 		return nil, fmt.Errorf("st: nil")
+	}
+
+	if h.snd == nil {
+		return nil, fmt.Errorf("snd: nil")
 	}
 
 	//
@@ -69,6 +75,14 @@ func NewHandler(opts ...Option) (*Handler, error) {
 func WithStorage(st storage.Storage) Option {
 	return func(h *Handler) error {
 		h.st = st
+		return nil
+	}
+}
+
+// WithSender sets Sender.
+func WithSender(snd sender.Service) Option {
+	return func(h *Handler) error {
+		h.snd = snd
 		return nil
 	}
 }
