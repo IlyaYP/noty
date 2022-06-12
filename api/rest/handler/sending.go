@@ -70,7 +70,8 @@ func (h *Handler) sendingStat(w http.ResponseWriter, r *http.Request) {
 
 // sendingAdd adds new sending
 func (h *Handler) sendingAdd(w http.ResponseWriter, r *http.Request) {
-	//ctx, _ := logging.GetCtxLogger(r.Context())
+	//ctx, _ := logging.GetCtxLogger(r.Context()) // I don't want to use context from r.Context()
+	// because it is canceled after the request is done
 	ctx, _ := logging.GetCtxLogger(context.Background())
 
 	logger := h.Logger(ctx)
@@ -103,7 +104,7 @@ func (h *Handler) sendingAdd(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info().Msg("new sending")
 
-	go h.snd.Process(ctx, *input)
+	go h.snd.ProcessSending(ctx, *input) // TODO: replace with channel
 
 	render.Render(w, r, input)
 

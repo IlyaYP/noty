@@ -116,10 +116,10 @@ func (svc *Storage) Migrate(ctx context.Context) error {
 		CREATE TABLE IF NOT EXISTS sendings
 		(
 			id uuid default uuid_generate_v4(),
-			start_at timestamp not null default now(),
+			start_at timestamp with time zone not null default now(),
 			text varchar(160) not null,
 			filter filter,
-			stop_at timestamp,
+			stop_at timestamp with time zone,
 			primary key (id)
 		);
 
@@ -146,7 +146,8 @@ func (svc *Storage) Migrate(ctx context.Context) error {
 		    client_id uuid not null,
 			primary key (id),
 			foreign key (sending_id) references sendings (id) ON DELETE CASCADE,
-			foreign key (client_id) references clients (id) ON DELETE CASCADE
+			foreign key (client_id) references clients (id) ON DELETE CASCADE,
+			unique (sending_id, client_id)
 		);
 	END;
 	$$

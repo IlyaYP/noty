@@ -70,7 +70,7 @@ func run() error {
 		return err
 	}
 
-	//sndr.Process(ctx)
+	go sndr.Run(ctx)
 
 	srv, err := rest.New(rest.WithConfig(cfg.APISever), rest.WithStorage(st), rest.WithSender(sndr))
 	if err != nil {

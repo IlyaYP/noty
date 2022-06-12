@@ -40,27 +40,21 @@ func (m *Message) GetLoggerContext(logCtx zerolog.Context) zerolog.Context {
 type MessageStatus string
 
 const (
-	MessageStatusNew       MessageStatus = "NEW"
-	MessageStatusShipped   MessageStatus = "SHIPPED"
-	MessageStatusDelivered MessageStatus = "DELIVERED"
-	MessageStatusCompleted MessageStatus = "COMPLETED"
+	MessageStatusNew  MessageStatus = "NEW"
+	MessageStatusSent MessageStatus = "SENT"
 )
 
 var (
 	// messageStatusMap maps OrderStatus value to its int representation.
 	messageStatusToIntMap = map[MessageStatus]int{
-		MessageStatusNew:       1,
-		MessageStatusShipped:   2,
-		MessageStatusDelivered: 3,
-		MessageStatusCompleted: 4,
+		MessageStatusNew:  1,
+		MessageStatusSent: 2,
 	}
 
 	// messageStatusToStrMap maps OrderStatus value to its string representation.
 	messageStatusToStrMap = map[int]MessageStatus{
 		1: MessageStatusNew,
-		2: MessageStatusShipped,
-		3: MessageStatusDelivered,
-		4: MessageStatusCompleted,
+		2: MessageStatusSent,
 	}
 )
 

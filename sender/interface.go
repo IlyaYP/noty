@@ -6,5 +6,7 @@ import (
 )
 
 type Service interface {
-	Process(ctx context.Context, sending model.Sending) error
+	ProcessSending(ctx context.Context, sending model.Sending) error
+
+	ProcessSendings(ctx context.Context) error
 }

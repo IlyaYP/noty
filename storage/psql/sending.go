@@ -111,3 +111,45 @@ func (svc *Storage) GetSendings(ctx context.Context) (model.Sendings, error) {
 
 	return sendings, nil
 }
+
+// FilterCurrentSendings returns sendings for current time.
+func (svc *Storage) FilterCurrentSendings(ctx context.Context) (model.Sendings, error) {
+	logger := svc.Logger(ctx)
+	var sendings model.Sendings
+
+	sendingsRows, err := svc.pool.Query(
+		ctx,
+		"select * from sendings WHERE start_at <= now() AND stop_at >= now() ORDER BY stop_at ASC",
+		pgx.QueryResultFormats{pgx.BinaryFormatCode},
+	)
+
+	if err != nil {
+		logger.Err(err).Msg("FilterCurrentSendings")
+		return nil, err //pgx.ErrNoRows
+	}
+
+	defer sendingsRows.Close()
+
+	for sendingsRows.Next() {
+		sending := model.Sending{}
+		err := sendingsRows.Scan(
+			&sending.ID,
+			&sending.StartAt,
+			&sending.Text,
+			&sending.Filter,
+			&sending.StopAt,
+		)
+		if err != nil {
+			logger.Err(err).Msg("FilterCurrentSendings")
+			continue
+		}
+		sendings = append(sendings, sending)
+
+	}
+
+	if len(sendings) == 0 {
+		return nil, pkg.ErrNoData
+	}
+
+	return sendings, nil
+}

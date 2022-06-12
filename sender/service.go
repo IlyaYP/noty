@@ -2,9 +2,10 @@ package sender
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgx/v4"
 	"github.com/rs/zerolog"
+	"math/rand"
 	"noty/model"
 	"noty/pkg/logging"
 	"noty/storage"
@@ -58,15 +59,18 @@ func New(opts ...Option) (*service, error) {
 	//if svc.AccrualProvider == nil {
 	//	return nil, fmt.Errorf("AccrualProvider: nil")
 	//}
+
+	rand.Seed(time.Now().UnixNano())
+
 	return svc, nil
 
 }
 
-func (svc *service) Process(ctx context.Context, sending model.Sending) error {
+func (svc *service) ProcessSending(ctx context.Context, sending model.Sending) error {
 	//ctx, _ = logging.GetCtxLogger(ctx) // correlationID is created here
 	logger := svc.Logger(ctx)
 
-	logger.Info().Msgf("Process...")
+	//logger.Info().Msgf("ProcessSending...")
 
 	if !svc.CheckTime(ctx, sending) {
 		return nil
@@ -78,23 +82,78 @@ func (svc *service) Process(ctx context.Context, sending model.Sending) error {
 		return fmt.Errorf("filtering clients: %w", err)
 	}
 
-	cl, _ := json.Marshal(clients)
-	logger.Debug().Msgf("clients: %s", string(cl))
+	//cl, _ := json.Marshal(clients)
+	//logger.Debug().Msgf("clients: %s", string(cl))
 
 	for _, client := range clients {
-		message, err := svc.Storage.CreateMessage(ctx,
-			model.Message{
-				Status:    model.MessageStatusNew,
-				SendingID: sending.ID,
-				ClientID:  client.ID,
-			})
-		if err != nil {
-			logger.Err(err).Msg("failed to create message")
+		message, err := svc.Storage.GetMessageByClientAndSendingID(ctx, client.ID, sending.ID)
+		if err == pgx.ErrNoRows {
+			message, err = svc.Storage.CreateMessage(ctx,
+				model.Message{
+					Status:    model.MessageStatusNew,
+					SendingID: sending.ID,
+					ClientID:  client.ID,
+				})
+			if err != nil {
+				logger.Err(err).Msg("failed to create message")
+				continue
+			}
+		} else if err != nil {
+			logger.Err(err).Msg("failed to get message")
 			continue
 		}
-		logger.Debug().Msgf("client: %v message: %v", client.Phone, message.ID)
+
+		if message.Status != model.MessageStatusNew {
+			continue
+		}
+
+		err = svc.SendMessage(ctx, model.MessageToSend{
+			ID:    message.ID,
+			Phone: client.Phone,
+			Text:  sending.Text,
+		})
+
+		if err != nil {
+			logger.Err(err).Msgf("failed to send message: %v", message.ID)
+			continue
+		}
+
+		message.Status = model.MessageStatusSent
+		message.CreatedAt = time.Now()
+		message, err = svc.Storage.UpdateMessage(ctx, message)
+		if err != nil {
+			logger.Err(err).Msgf("failed to update message: %v", message.ID)
+			continue
+		}
+
+		logger.Debug().Msgf("client: %+v", client)
+		logger.Debug().Msgf("message: %+v", message)
 	}
 
+	return nil
+}
+
+func (svc *service) ProcessSendings(ctx context.Context) error {
+	logger := svc.Logger(ctx)
+	logger.Info().Msg("started")
+
+	sendings, err := svc.Storage.FilterCurrentSendings(ctx)
+	if err != nil {
+		logger.Err(err).Msg("failed to filter sendings")
+		return fmt.Errorf("filtering sendings: %w", err)
+	}
+
+	for _, sending := range sendings {
+		err = svc.ProcessSending(ctx, sending)
+		if err != nil {
+			logger.Err(err).Msg("failed to process sending")
+			continue
+		}
+
+		logger.Debug().Msgf("sending: %+v", sending)
+	}
+
+	logger.Info().Msg("finished")
 	return nil
 }
 
@@ -112,4 +171,40 @@ func (svc *service) CheckTime(ctx context.Context, sending model.Sending) bool {
 		return true
 	}
 	return false
+}
+
+// SendMessage sends message to client.
+func (svc *service) SendMessage(ctx context.Context, message model.MessageToSend) error {
+	logger := svc.Logger(ctx)
+
+	sendingDelay := 3
+
+	delay := rand.Intn(sendingDelay)
+	if delay == 2 {
+		return fmt.Errorf("cant send message")
+	}
+
+	logger.Info().Msgf("Sending message: %+v", message)
+	time.Sleep(time.Duration(delay) * time.Second)
+
+	return nil
+}
+
+// Run starts service.
+func (svc *service) Run(ctx context.Context) error {
+	logger := svc.Logger(ctx)
+	logger.Info().Msg("started")
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info().Msg("stopped")
+			return nil
+		case <-time.After(time.Second * 10):
+			err := svc.ProcessSendings(ctx)
+			if err != nil {
+				logger.Err(err).Msg("failed to process sendings")
+			}
+		}
+	}
 }
