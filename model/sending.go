@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
@@ -9,7 +8,6 @@ import (
 	"github.com/rs/zerolog"
 	"net/http"
 	"noty/pkg/logging"
-	"os"
 	"time"
 )
 
@@ -26,7 +24,14 @@ type (
 		Filter  Filter    `json:"filter,omitempty"`
 		StopAt  time.Time `json:"stop_at,omitempty"`
 	}
-	Sendings []Sending
+	Sendings []*Sending
+
+	SendingStatus struct {
+		Sending *Sending `json:"sending"`
+		New     int      `json:"new"`
+		Sent    int      `json:"sent"`
+	}
+	SendingsStatus []*SendingStatus
 )
 
 func (dst *Filter) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
@@ -65,6 +70,10 @@ func (Sendings) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func (*SendingsStatus) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
 func (s *Sending) Bind(r *http.Request) error {
 	//if s.ID == uuid.Nil {
 	//	s.ID, _ = uuid.NewUUID()
@@ -90,26 +99,4 @@ func (s *Sending) GetLoggerContext(logCtx zerolog.Context) zerolog.Context {
 	}
 
 	return logCtx
-}
-
-func qq() {
-	qq := Sending{
-		ID:      uuid.UUID{},
-		StartAt: time.Time{},
-		Text:    "",
-		Filter: Filter{
-			Tags:  []string{"vip1", "vip2"},
-			Codes: []int{911, 912},
-		},
-		StopAt: time.Time{},
-	}
-	b, err := json.Marshal(qq)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-	os.Stdout.Write(b)
-
-	var qqq Sending
-	json.Unmarshal(b, &qqq)
-
 }

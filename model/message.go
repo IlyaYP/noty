@@ -17,14 +17,23 @@ type (
 		SendingID uuid.UUID     `json:"sending_id" yaml:"sending_id"`
 		ClientID  uuid.UUID     `json:"client_id" yaml:"client_id"`
 	}
+
+	Messages []*Message
+
 	MessageToSend struct {
 		ID    int64  `json:"id" yaml:"id"`
 		Phone int    `json:"phone" yaml:"phone"`
 		Text  string `json:"text" yaml:"text"`
 	}
+
+	MessageStatus string
 )
 
 func (*Message) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+func (*Messages) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
@@ -36,8 +45,6 @@ func (m *Message) GetLoggerContext(logCtx zerolog.Context) zerolog.Context {
 
 	return logCtx
 }
-
-type MessageStatus string
 
 const (
 	MessageStatusNew  MessageStatus = "NEW"

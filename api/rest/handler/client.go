@@ -14,8 +14,8 @@ import (
 )
 
 func (h *Handler) client(router chi.Router) {
-	//router.Get("/", h.clientsGet)
-	router.Get("/", h.clientsFilter)
+	router.Get("/", h.clientsGet)
+	//router.Get("/", h.clientsFilter)
 	router.Post("/", h.clientAdd)
 	router.Route("/{id}", func(router chi.Router) {
 		router.Use(h.clientContext)

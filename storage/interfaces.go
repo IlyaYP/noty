@@ -31,11 +31,15 @@ type Storage interface {
 
 	GetSendings(ctx context.Context) (model.Sendings, error)
 
+	GetSendingsStatus(ctx context.Context) (model.SendingsStatus, error)
+
 	FilterCurrentSendings(ctx context.Context) (model.Sendings, error)
 
 	CreateMessage(ctx context.Context, message model.Message) (model.Message, error)
 
 	UpdateMessage(ctx context.Context, message model.Message) (model.Message, error)
+
+	GetMessagesBySendingID(ctx context.Context, sendingID uuid.UUID) (model.Messages, error)
 
 	GetMessageByClientAndSendingID(ctx context.Context, clientID uuid.UUID, sendingID uuid.UUID) (model.Message, error)
 }

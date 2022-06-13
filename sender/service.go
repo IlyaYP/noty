@@ -21,6 +21,7 @@ const (
 type (
 	service struct {
 		Storage storage.Storage
+		inQueue chan model.Sending
 		//AccrualProvider accrual.Provider
 	}
 
@@ -61,9 +62,34 @@ func New(opts ...Option) (*service, error) {
 	//}
 
 	rand.Seed(time.Now().UnixNano())
+	svc.inQueue = make(chan model.Sending, 100)
 
 	return svc, nil
 
+}
+
+// Run starts service.
+func (svc *service) Run(ctx context.Context) error {
+	logger := svc.Logger(ctx)
+	logger.Info().Msg("started")
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info().Msg("stopped")
+			return nil
+		case sending := <-svc.inQueue:
+			err := svc.ProcessSending(ctx, sending)
+			if err != nil {
+				logger.Err(err).Msg("failed to process sending")
+			}
+		case <-time.After(time.Second * 60):
+			err := svc.ProcessSendings(ctx)
+			if err != nil {
+				logger.Err(err).Msg("failed to process sendings")
+			}
+		}
+	}
 }
 
 func (svc *service) ProcessSending(ctx context.Context, sending model.Sending) error {
@@ -135,7 +161,6 @@ func (svc *service) ProcessSending(ctx context.Context, sending model.Sending) e
 
 func (svc *service) ProcessSendings(ctx context.Context) error {
 	logger := svc.Logger(ctx)
-	logger.Info().Msg("started")
 
 	sendings, err := svc.Storage.FilterCurrentSendings(ctx)
 	if err != nil {
@@ -144,7 +169,7 @@ func (svc *service) ProcessSendings(ctx context.Context) error {
 	}
 
 	for _, sending := range sendings {
-		err = svc.ProcessSending(ctx, sending)
+		err = svc.ProcessSending(ctx, *sending)
 		if err != nil {
 			logger.Err(err).Msg("failed to process sending")
 			continue
@@ -153,16 +178,7 @@ func (svc *service) ProcessSendings(ctx context.Context) error {
 		logger.Debug().Msgf("sending: %+v", sending)
 	}
 
-	logger.Info().Msg("finished")
 	return nil
-}
-
-// Logger returns logger with service field set.
-func (svc *service) Logger(ctx context.Context) *zerolog.Logger {
-	_, logger := logging.GetCtxLogger(ctx)
-	logger = logger.With().Str(logging.ServiceKey, serviceName).Logger()
-
-	return &logger
 }
 
 // CheckTime checks if time is between start and end.
@@ -190,21 +206,14 @@ func (svc *service) SendMessage(ctx context.Context, message model.MessageToSend
 	return nil
 }
 
-// Run starts service.
-func (svc *service) Run(ctx context.Context) error {
-	logger := svc.Logger(ctx)
-	logger.Info().Msg("started")
+// Logger returns logger with service field set.
+func (svc *service) Logger(ctx context.Context) *zerolog.Logger {
+	_, logger := logging.GetCtxLogger(ctx)
+	logger = logger.With().Str(logging.ServiceKey, serviceName).Logger()
 
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Info().Msg("stopped")
-			return nil
-		case <-time.After(time.Second * 10):
-			err := svc.ProcessSendings(ctx)
-			if err != nil {
-				logger.Err(err).Msg("failed to process sendings")
-			}
-		}
-	}
+	return &logger
+}
+
+func (svc *service) NewSending(ctx context.Context, sending model.Sending) {
+	svc.inQueue <- sending
 }

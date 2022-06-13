@@ -119,7 +119,7 @@ func (svc *Storage) Migrate(ctx context.Context) error {
 			start_at timestamp with time zone not null default now(),
 			text varchar(160) not null,
 			filter filter,
-			stop_at timestamp with time zone,
+			stop_at timestamp with time zone not null default now(),
 			primary key (id)
 		);
 

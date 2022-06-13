@@ -75,3 +75,43 @@ func (svc *Storage) GetMessageByClientAndSendingID(ctx context.Context, clientID
 
 	return message, nil
 }
+
+// GetMessagesBySendingID returns messages by sending ID.
+func (svc *Storage) GetMessagesBySendingID(ctx context.Context, sendingID uuid.UUID) (model.Messages, error) {
+	logger := svc.Logger(ctx)
+
+	rows, err := svc.pool.Query(ctx,
+		`select id, created_at, status, sending_id, client_id from messages where sending_id = $1`,
+		sendingID)
+	if err != nil {
+		logger.Err(err).Msg("getting messages")
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages model.Messages
+	for rows.Next() {
+		var message model.Message
+		var status int
+		err := rows.Scan(&message.ID, &message.CreatedAt, &status, &message.SendingID, &message.ClientID)
+		if err != nil {
+			logger.Err(err).Msg("getting messages")
+			return nil, err
+		}
+		message.Status = model.NewMessageStatusFromInt(status)
+		messages = append(messages, &message)
+
+	}
+
+	if err = rows.Err(); err != nil {
+		logger.Err(err).Msg("getting messages")
+		return nil, err
+	}
+
+	if len(messages) == 0 {
+		logger.Err(pkg.ErrNoData).Msg("getting messages")
+		return nil, pkg.ErrNoData
+	}
+
+	return messages, nil
+}

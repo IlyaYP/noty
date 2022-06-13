@@ -33,7 +33,7 @@ func (h *Handler) sendingsGenStat(w http.ResponseWriter, r *http.Request) {
 	ctx, _ := logging.GetCtxLogger(r.Context())
 	logger := h.Logger(ctx)
 
-	sendings, err := h.st.GetSendings(ctx)
+	sendings, err := h.st.GetSendingsStatus(ctx)
 	if err != nil {
 		if errors.Is(err, pkg.ErrNoData) {
 			render.Render(w, r, ErrNoData)
@@ -44,8 +44,7 @@ func (h *Handler) sendingsGenStat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.Render(w, r, sendings)
-
+	render.Render(w, r, &sendings)
 }
 
 // sendingContext do smth
@@ -64,8 +63,24 @@ func (h *Handler) sendingStat(w http.ResponseWriter, r *http.Request) {
 	logger := h.Logger(ctx)
 
 	id := chi.URLParam(r, "id")
-	logger.Info().Msgf("sendingStat %s", id)
-	fmt.Fprintf(w, "sendingStat  %s", id)
+	//logger.Info().Msgf("sendingStat %s", id)
+	//fmt.Fprintf(w, "sendingStat  %s", id)
+
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		logger.Err(err).Msg("sendingStat uuid.Parse")
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	messages, err := h.st.GetMessagesBySendingID(ctx, uid)
+	if err != nil {
+		logger.Err(err).Msg("sendingStat GetMessagesBySendingID")
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	render.Render(w, r, &messages)
 }
 
 // sendingAdd adds new sending
@@ -103,8 +118,9 @@ func (h *Handler) sendingAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info().Msg("new sending")
+	logger.Debug().Msgf("sending: %+v", input)
 
-	go h.snd.ProcessSending(ctx, *input) // TODO: replace with channel
+	go h.snd.NewSending(ctx, *input)
 
 	render.Render(w, r, input)
 

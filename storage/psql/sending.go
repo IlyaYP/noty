@@ -102,7 +102,7 @@ func (svc *Storage) GetSendings(ctx context.Context) (model.Sendings, error) {
 			logger.Err(err).Msg("GetSendings")
 			continue
 		}
-		sendings = append(sendings, sending)
+		sendings = append(sendings, &sending)
 	}
 
 	if len(sendings) == 0 {
@@ -110,6 +110,58 @@ func (svc *Storage) GetSendings(ctx context.Context) (model.Sendings, error) {
 	}
 
 	return sendings, nil
+}
+
+// GetSendingsStatus returns the status of all sendings.
+func (svc *Storage) GetSendingsStatus(ctx context.Context) (model.SendingsStatus, error) {
+	logger := svc.Logger(ctx)
+	var sendingsStatus model.SendingsStatus
+
+	sendingsRows, err := svc.pool.Query(
+		ctx,
+		`
+WITH stnew AS
+(select  sending_id, count(status) as new from messages where status=1 group by sending_id),
+stsent AS
+(select  sending_id, count(status) as sent from messages where status=2 group by sending_id)
+
+select sendings.*, COALESCE(stnew.new,0),  COALESCE(stsent.sent,0) from sendings
+left join stnew on sendings.id=stnew.sending_id
+left join stsent on sendings.id=stsent.sending_id; `,
+		pgx.QueryResultFormats{pgx.BinaryFormatCode},
+	)
+	if err != nil {
+		logger.Err(err).Msg("GetSendingsStatus")
+		return nil, err //pgx.ErrNoRows
+	}
+	defer sendingsRows.Close()
+
+	for sendingsRows.Next() {
+		sending := model.Sending{}
+		status := model.SendingStatus{}
+		err := sendingsRows.Scan(
+			&sending.ID,
+			&sending.StartAt,
+			&sending.Text,
+			&sending.Filter,
+			&sending.StopAt,
+			&status.New,
+			&status.Sent,
+		)
+		if err != nil {
+			logger.Err(err).Msg("GetSendingsStatus")
+			continue
+		}
+		status.Sending = &sending
+		sendingsStatus = append(sendingsStatus, &status)
+
+	}
+	if len(sendingsStatus) == 0 {
+		return nil, pkg.ErrNoData
+
+	}
+
+	return sendingsStatus, nil
 }
 
 // FilterCurrentSendings returns sendings for current time.
@@ -143,7 +195,7 @@ func (svc *Storage) FilterCurrentSendings(ctx context.Context) (model.Sendings, 
 			logger.Err(err).Msg("FilterCurrentSendings")
 			continue
 		}
-		sendings = append(sendings, sending)
+		sendings = append(sendings, &sending)
 
 	}
 
@@ -153,3 +205,14 @@ func (svc *Storage) FilterCurrentSendings(ctx context.Context) (model.Sendings, 
 
 	return sendings, nil
 }
+
+/*
+WITH stnew AS
+(select  sending_id, count(status) as new from messages where status=1 group by sending_id),
+stsent AS
+(select  sending_id, count(status) as sent from messages where status=2 group by sending_id)
+
+select sendings.*, stnew.new,  stsent.sent from sendings
+left join stnew on sendings.id=stnew.sending_id
+left join stsent on sendings.id=stsent.sending_id;
+*/
