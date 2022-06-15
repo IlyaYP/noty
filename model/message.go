@@ -29,6 +29,11 @@ type (
 	MessageStatus string
 )
 
+func (m MessageToSend) Bind(r *http.Request) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (*Message) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }

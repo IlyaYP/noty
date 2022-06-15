@@ -8,17 +8,18 @@ import (
 	"github.com/rs/zerolog/log"
 	"io"
 	"noty/api/rest"
+	"noty/sender"
 	"noty/storage/psql"
 )
 
 // Config combines sub-configs for all services, storages and providers.
 type Config struct {
-	//UserService         user.Config
-	PSQLStorage psql.Config
-	APISever    rest.Config
-	//AccrualHTTPProvider http.Config
+	Sender        sender.Config
+	PSQLStorage   psql.Config
+	APISever      rest.Config
 	Address       string `env:"RUN_ADDRESS"`
 	SenderAddress string `env:"SENDER_ADDRESS"`
+	SenderToken   string `env:"SENDER_TOKEN"`
 	DSN           string `env:"DATABASE_URI"`
 	Closer        []io.Closer
 }
@@ -29,6 +30,7 @@ func New() (*Config, error) {
 	flag.StringVar(&cfg.DSN, "d", "postgres://postgres:postgres@localhost:5432/noty", "DATABASE_URI")
 	flag.StringVar(&cfg.Address, "a", "localhost:8080", "RUN_ADDRESS")
 	flag.StringVar(&cfg.SenderAddress, "r", "localhost:8081", "SENDER_ADDRESS")
+	flag.StringVar(&cfg.SenderToken, "t", "", "SENDER_TOKEN")
 	debug := flag.Bool("debug", false, "sets log level to debug")
 	flag.Parse()
 
@@ -37,9 +39,6 @@ func New() (*Config, error) {
 	if *debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
-
-	log.Debug().Msg("This message appears only when log level set to Debug")
-	log.Info().Msg("This message appears when log level set to Debug or Info")
 
 	if err := env.Parse(&cfg); err != nil {
 		return nil, fmt.Errorf("initializing config: %w", err)
@@ -52,8 +51,9 @@ func New() (*Config, error) {
 	cfg.PSQLStorage = psql.NewDefaultConfig()
 	cfg.PSQLStorage.DSN = cfg.DSN
 	cfg.APISever.Address = cfg.Address
-	//cfg.AccrualHTTPProvider = http.NewDefaultConfig()
-	//cfg.AccrualHTTPProvider.AccrualAddress = cfg.AccrualAddress
+	cfg.Sender = sender.NewDefaultConfig()
+	cfg.Sender.Address = cfg.SenderAddress
+	cfg.Sender.Token = cfg.SenderToken
 
 	return &cfg, nil
 }
@@ -75,7 +75,8 @@ func (c Config) validate() error {
 	}
 	Logger = Logger.With().Str("SENDER_ADDRESS", c.SenderAddress).Logger()
 
-	Logger.Info().Msg("Initialized with args:")
+	Logger.Debug().Msg("Initialized with args:")
+
 	return nil
 }
 

@@ -1,11 +1,15 @@
 package sender
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/jackc/pgx/v4"
 	"github.com/rs/zerolog"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"noty/model"
 	"noty/pkg/logging"
 	"noty/storage"
@@ -22,19 +26,20 @@ type (
 	service struct {
 		Storage storage.Storage
 		inQueue chan model.Sending
-		//AccrualProvider accrual.Provider
+		client  *http.Client
+		config  Config
 	}
 
 	Option func(svc *service) error
 )
 
-//// WithAccrualProvider sets accrual.Provider.
-//func WithAccrualProvider(pr accrual.Provider) Option {
-//	return func(svc *service) error {
-//		svc.AccrualProvider = pr
-//		return nil
-//	}
-//}
+// WithConfig sets config.
+func WithConfig(cfg Config) Option {
+	return func(svc *service) error {
+		svc.config = cfg
+		return nil
+	}
+}
 
 // WithStorage sets storage.Storage.
 func WithStorage(st storage.Storage) Option {
@@ -63,6 +68,8 @@ func New(opts ...Option) (*service, error) {
 
 	rand.Seed(time.Now().UnixNano())
 	svc.inQueue = make(chan model.Sending, 100)
+
+	svc.client = &http.Client{}
 
 	return svc, nil
 
@@ -175,7 +182,7 @@ func (svc *service) ProcessSendings(ctx context.Context) error {
 			continue
 		}
 
-		logger.Debug().Msgf("sending: %+v", sending)
+		//logger.Debug().Msgf("sending: %+v", sending)
 	}
 
 	return nil
@@ -216,4 +223,48 @@ func (svc *service) Logger(ctx context.Context) *zerolog.Logger {
 
 func (svc *service) NewSending(ctx context.Context, sending model.Sending) {
 	svc.inQueue <- sending
+}
+
+// SendHTTP sends message to client.
+// POST https://probe.fbrq.cloud/v1/send/{{msgId}}
+func (svc *service) SendHTTP(ctx context.Context, message model.MessageToSend) error {
+	logger := svc.Logger(ctx)
+
+	jsonData, err := json.Marshal(message)
+	if err != nil {
+		logger.Err(err).Msg("failed to marshal message")
+		return fmt.Errorf("marshaling message: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/%d", svc.config.endPoint, message.ID)
+	logger.Debug().Msgf("url: %s", url)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		logger.Err(err).Msg("failed to create request")
+		return fmt.Errorf("creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", svc.config.Token))
+
+	resp, err := svc.client.Do(req)
+	if err != nil {
+		logger.Err(err).Msg("failed to send request")
+		return fmt.Errorf("sending request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Err(err).Msg("failed to send request")
+		return fmt.Errorf("sending request: %w", err)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logger.Err(err).Msg("failed to read response")
+		return fmt.Errorf("reading response: %w", err)
+	}
+	logger.Debug().Msgf("response: %s", string(body))
+
+	return nil
 }

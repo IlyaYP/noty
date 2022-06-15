@@ -1,0 +1,85 @@
+basePath: /api
+definitions:
+  handler.ErrResponse:
+    properties:
+      code:
+        description: application-specific error code
+        type: integer
+      error:
+        description: application-level error message, for debugging
+        type: string
+      status:
+        description: user-level status message
+        type: string
+    type: object
+  model.Client:
+    properties:
+      id:
+        type: string
+      op_code:
+        type: integer
+      phone:
+        type: integer
+      tag:
+        type: string
+      tz:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample server Petstore server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Swagger Example API
+  version: "1.0"
+paths:
+  /api/clients:
+    get:
+      consumes:
+      - application/json
+      description: Gets clients
+      operationId: create-list
+      parameters:
+      - description: list info
+        in: body
+        name: input
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/model.Client'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: integer
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrResponse'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/handler.ErrResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Gets clients
+      tags:
+      - lists
+swagger: "2.0"

@@ -11,7 +11,6 @@ import (
 )
 
 // CreateSending creates a new model.Sending.
-// Returns ErrAlreadyExists if user exists.
 func (svc *Storage) CreateSending(ctx context.Context, sending model.Sending) (model.Sending, error) {
 	logger := svc.Logger(ctx)
 	logger.UpdateContext(sending.GetLoggerContext)
@@ -205,14 +204,3 @@ func (svc *Storage) FilterCurrentSendings(ctx context.Context) (model.Sendings, 
 
 	return sendings, nil
 }
-
-/*
-WITH stnew AS
-(select  sending_id, count(status) as new from messages where status=1 group by sending_id),
-stsent AS
-(select  sending_id, count(status) as sent from messages where status=2 group by sending_id)
-
-select sendings.*, stnew.new,  stsent.sent from sendings
-left join stnew on sendings.id=stnew.sending_id
-left join stsent on sendings.id=stsent.sending_id;
-*/

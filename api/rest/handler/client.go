@@ -47,6 +47,19 @@ func (h *Handler) clientsFilter(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// @Summary Gets clients
+// @Security ApiKeyAuth
+// @Tags lists
+// @Description Gets clients
+// @ID create-list
+// @Accept  json
+// @Produce  json
+// @Param input body model.Clients true "list info"
+// @Success 200 {integer} integer 1
+// @Failure 400,404 {object} ErrResponse
+// @Failure 500 {object} ErrResponse
+// @Failure default {object} ErrResponse
+// @Router /api/clients [get]
 func (h *Handler) clientsGet(w http.ResponseWriter, r *http.Request) {
 	ctx, _ := logging.GetCtxLogger(r.Context())
 	logger := h.Logger(ctx)
